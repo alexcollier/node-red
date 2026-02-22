@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl:*)",
+      "Bash(python:*)",
+      "Bash(ls -lh /mnt/h/ERA-Projects/NODE-RED/packages/node_modules/@node-red/nodes/core/common/*.js)",
+      "Bash(xargs -I {} basename {})",
+      "Bash(ls -lh /mnt/h/ERA-Projects/NODE-RED/packages/node_modules/@node-red/nodes/core/function/*.js)",
+      "Bash(ls -lh /mnt/h/ERA-Projects/NODE-RED/packages/node_modules/@node-red/nodes/core/network/*.js)",
+      "Bash(ls -lh /mnt/h/ERA-Projects/NODE-RED/packages/node_modules/@node-red/nodes/core/sequence/*.js)",
+      "Bash(ls -lh /mnt/h/ERA-Projects/NODE-RED/packages/node_modules/@node-red/nodes/core/parsers/*.js)",
+      "Bash(ls -lh /mnt/h/ERA-Projects/NODE-RED/packages/node_modules/@node-red/nodes/core/storage/*.js)",
+      "Bash(./node_modules/.bin/mocha:*)",
+      "Bash(npm test:*)",
+      "Bash(./node_modules/.bin/grunt simplemocha:all:*)",
+      "Bash(node:*)",
+      "Bash(timeout 45 node:*)",
+      "Bash(ls:*)"
+    ]
+  }
+}

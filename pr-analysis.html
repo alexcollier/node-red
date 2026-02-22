@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Node-RED Open PR Difficulty &amp; AI Suitability Analysis</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+:root {
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-card: #1e293b;
+  --bg-hover: #334155;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --border-color: #334155;
+  --tier-trivial: #22c55e;
+  --tier-low: #3b82f6;
+  --tier-medium: #eab308;
+  --tier-medium-high: #f97316;
+  --tier-high: #ef4444;
+  --accent: #38bdf8;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+.container { max-width: 1400px; margin: 0 auto; padding: 0 24px; }
+
+/* Header */
+.page-header {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border-bottom: 1px solid var(--border-color);
+  padding: 32px 0;
+  text-align: center;
+}
+.page-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, var(--accent), #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.page-header p { color: var(--text-secondary); font-size: 1rem; }
+.page-header .open-badge {
+  display: inline-block;
+  background: rgba(34,197,94,0.15);
+  color: var(--tier-trivial);
+  border: 1px solid rgba(34,197,94,0.3);
+  padding: 4px 14px;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-top: 10px;
+}
+
+/* Section headings */
+.section-title {
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--accent);
+  display: inline-block;
+}
+
+section { margin: 40px 0; }
+
+/* Stat Cards */
+.stat-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+.stat-card .stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.stat-card .stat-label {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Tabs */
+.tabs-container {
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg-card);
+}
+.tab-buttons {
+  display: flex;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
+  overflow-x: auto;
+}
+.tab-btn {
+  padding: 12px 24px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  white-space: nowrap;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+}
+.tab-btn:hover { color: var(--text-primary); background: var(--bg-hover); }
+.tab-btn.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  background: rgba(56, 189, 248, 0.05);
+}
+.tab-panel { display: none; padding: 24px; min-height: 350px; }
+.tab-panel.active { display: block; }
+.tab-panel .mermaid {
+  display: flex;
+  justify-content: center;
+}
+
+/* Charts Grid */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+@media (max-width: 900px) {
+  .charts-grid { grid-template-columns: 1fr; }
+}
+.chart-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+}
+.chart-card h3 {
+  font-size: 1rem;
+  margin-bottom: 16px;
+  color: var(--text-secondary);
+}
+.chart-wrapper {
+  position: relative;
+  width: 100%;
+  max-height: 350px;
+}
+
+/* Filter Bar */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  padding: 16px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+.filter-bar label {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+.filter-bar select, .filter-bar input {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+}
+.filter-bar select:focus, .filter-bar input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.filter-group { display: flex; align-items: center; gap: 6px; }
+
+/* Table */
+.table-container {
+  overflow-x: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-card);
+}
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+thead th {
+  background: var(--bg-primary);
+  padding: 12px 14px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  border-bottom: 2px solid var(--border-color);
+  transition: color 0.2s;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+thead th:hover { color: var(--accent); }
+thead th .sort-arrow { margin-left: 4px; font-size: 0.7rem; }
+tbody tr { border-bottom: 1px solid var(--border-color); transition: background 0.15s; }
+tbody tr:hover { background: var(--bg-hover); }
+tbody td { padding: 10px 14px; }
+tbody tr:last-child { border-bottom: none; }
+
+/* Badges */
+.tier-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.tier-Trivial { background: rgba(34,197,94,0.15); color: var(--tier-trivial); border: 1px solid rgba(34,197,94,0.3); }
+.tier-Low { background: rgba(59,130,246,0.15); color: var(--tier-low); border: 1px solid rgba(59,130,246,0.3); }
+.tier-Medium { background: rgba(234,179,8,0.15); color: var(--tier-medium); border: 1px solid rgba(234,179,8,0.3); }
+.tier-Medium-High { background: rgba(249,115,22,0.15); color: var(--tier-medium-high); border: 1px solid rgba(249,115,22,0.3); }
+.tier-High { background: rgba(239,68,68,0.15); color: var(--tier-high); border: 1px solid rgba(239,68,68,0.3); }
+
+/* AI Meter */
+.ai-meter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ai-meter-bar {
+  width: 80px;
+  height: 8px;
+  background: var(--bg-primary);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+.ai-meter-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.8s ease;
+  animation: meterPulse 2s ease-in-out;
+}
+@keyframes meterPulse {
+  0% { width: 0; }
+}
+.ai-meter-value { font-weight: 600; min-width: 20px; }
+
+.pr-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+.pr-link:hover { text-decoration: underline; }
+
+.no-results {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-muted);
+  font-size: 1rem;
+}
+
+/* PR Detail Cards */
+.pr-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+.pr-detail-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.pr-detail-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+.pr-detail-card .pr-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+.pr-detail-card .pr-card-title {
+  font-weight: 600;
+  font-size: 1rem;
+  line-height: 1.4;
+}
+.pr-detail-card .pr-card-meta {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+}
+.pr-detail-card .pr-card-desc {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  border-top: 1px solid var(--border-color);
+  padding-top: 12px;
+}
+.pr-card-stats {
+  display: flex;
+  gap: 16px;
+  margin-top: 12px;
+}
+.pr-card-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.pr-card-stat .stat-num {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+.pr-card-stat .stat-lbl {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+/* Footer */
+.page-footer {
+  text-align: center;
+  padding: 32px 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  border-top: 1px solid var(--border-color);
+  margin-top: 48px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .stat-cards { grid-template-columns: repeat(2, 1fr); }
+  .page-header h1 { font-size: 1.5rem; }
+  .filter-bar { flex-direction: column; align-items: stretch; }
+  .pr-details { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="page-header">
+  <div class="container">
+    <h1>Node-RED Open PR Difficulty &amp; AI Suitability Analysis</h1>
+    <p>Currently open Pull Requests on <code>node-red/node-red</code> &bull; Excluding PRs with merge commits &bull; Difficulty tiers, AI completion scores &amp; codebase impact</p>
+    <span class="open-badge">5 Open PRs</span>
+  </div>
+</header>
+
+<!-- Summary Dashboard -->
+<section class="container">
+  <h2 class="section-title">Summary Dashboard</h2>
+  <div class="stat-cards" id="stat-cards"></div>
+</section>
+
+<!-- PR Detail Cards -->
+<section class="container">
+  <h2 class="section-title">PR Breakdown</h2>
+  <div class="pr-details" id="pr-details"></div>
+</section>
+
+<!-- Mermaid Diagrams -->
+<section class="container">
+  <h2 class="section-title">Diagrams &amp; Flowcharts</h2>
+  <div class="tabs-container">
+    <div class="tab-buttons">
+      <button class="tab-btn active" data-tab="tab-classify">Difficulty Classification</button>
+      <button class="tab-btn" data-tab="tab-impact">Codebase Impact Map</button>
+      <button class="tab-btn" data-tab="tab-ai">AI Suitability Criteria</button>
+    </div>
+    <div class="tab-panel active" id="tab-classify">
+      <pre class="mermaid">
+flowchart TD
+    Start(["Analyze Open PR"]) --> FC{Files Changed?}
+    FC -->|"1 file"| LC1{"Lines Changed?"}
+    FC -->|"2-3 files"| LC2{"Lines &lt; 100?"}
+    FC -->|"4+ files"| MedPlus["Medium or Higher"]
+
+    LC1 -->|"&lt; 20 lines"| TT["Trivial\n#5486 #5484 #5482 #5459"]
+    LC1 -->|"20-99 lines"| TL["Low"]
+    LC1 -->|"100-299 lines"| TM["Medium"]
+    LC1 -->|"300+ lines"| TMH["Medium-High\n#5475"]
+
+    LC2 -->|Yes| TL
+    LC2 -->|No| TM
+
+    style TT fill:#065f46,stroke:#22c55e,color:#fff
+    style TL fill:#1e3a5f,stroke:#3b82f6,color:#fff
+    style TM fill:#713f12,stroke:#eab308,color:#fff
+    style TMH fill:#7c2d12,stroke:#f97316,color:#fff
+    style MedPlus fill:#713f12,stroke:#eab308,color:#fff
+    style Start fill:#1e293b,stroke:#38bdf8,color:#fff
+      </pre>
+    </div>
+    <div class="tab-panel" id="tab-impact">
+      <pre class="mermaid">
+flowchart LR
+    NR(["Node-RED\nRepository"]) --> EC["editor-client"]
+    NR --> ND["nodes"]
+    NR --> INF["infra / CI"]
+
+    EC --> KB["Keyboard / Shortcuts\n#5482 - Add section as meta-key"]
+    EC --> CFG["Config Node UI\n#5486 - Ctrl-select config nodes"]
+
+    ND --> NET["Network Nodes\n#5484 - TCP TLS log string fix\n#5459 - TCP double done fix"]
+
+    INF --> CI["GitHub Actions\n#5475 - WebContainer\nbranch preview deploys"]
+
+    style NR fill:#1e293b,stroke:#38bdf8,color:#fff
+    style EC fill:#1e3a5f,stroke:#3b82f6,color:#fff
+    style ND fill:#713f12,stroke:#eab308,color:#fff
+    style INF fill:#374151,stroke:#6b7280,color:#fff
+      </pre>
+    </div>
+    <div class="tab-panel" id="tab-ai">
+      <pre class="mermaid">
+flowchart TD
+    START(["Assess AI Suitability"]) --> S1{Scope Definition}
+    S1 -->|"Isolated change\n+3 pts"| S2{Pattern Availability}
+    S1 -->|"Multi-component\n+1 pt"| S2
+    S1 -->|"Cross-cutting\n+0 pts"| S2
+
+    S2 -->|"Clear patterns exist\n+3 pts"| S3{System Knowledge}
+    S2 -->|"Some patterns\n+2 pts"| S3
+    S2 -->|"Novel approach needed\n+0 pts"| S3
+
+    S3 -->|"Shallow / surface\n+2 pts"| S4{Testability}
+    S3 -->|"Moderate depth\n+1 pt"| S4
+    S3 -->|"Deep architecture\n+0 pts"| S4
+
+    S4 -->|"Has tests or clear spec\n+2 pts"| SCORE["Calculate Total"]
+    S4 -->|"Partially testable\n+1 pt"| SCORE
+    S4 -->|"Hard to verify\n+0 pts"| SCORE
+
+    SCORE --> HIGH["HIGH 8-10\nAI can likely complete\n#5486 #5484 #5482 #5459"]
+    SCORE --> MED["MEDIUM 5-7\nAI needs guidance"]
+    SCORE --> LOW["LOW 1-4\nAI unlikely to complete\n#5475"]
+
+    style START fill:#1e293b,stroke:#38bdf8,color:#fff
+    style HIGH fill:#065f46,stroke:#22c55e,color:#fff
+    style MED fill:#713f12,stroke:#eab308,color:#fff
+    style LOW fill:#7f1d1d,stroke:#ef4444,color:#fff
+    style SCORE fill:#1e293b,stroke:#a78bfa,color:#fff
+      </pre>
+    </div>
+  </div>
+</section>
+
+<!-- Charts -->
+<section class="container">
+  <h2 class="section-title">Charts &amp; Visualizations</h2>
+  <div class="charts-grid">
+    <div class="chart-card">
+      <h3>PR Distribution by Difficulty Tier</h3>
+      <div class="chart-wrapper"><canvas id="chart-distribution"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>AI Suitability Scores by PR</h3>
+      <div class="chart-wrapper"><canvas id="chart-ai-scores"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>Theme Radar: PR Count &amp; Avg AI Score</h3>
+      <div class="chart-wrapper"><canvas id="chart-radar"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>Difficulty Tier vs AI Suitability</h3>
+      <div class="chart-wrapper"><canvas id="chart-scatter"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- PR Table -->
+<section class="container">
+  <h2 class="section-title">Interactive PR Table</h2>
+  <div class="filter-bar">
+    <div class="filter-group">
+      <label for="filter-tier">Tier:</label>
+      <select id="filter-tier"><option value="">All</option></select>
+    </div>
+    <div class="filter-group">
+      <label for="filter-category">Category:</label>
+      <select id="filter-category"><option value="">All</option></select>
+    </div>
+    <div class="filter-group">
+      <label for="filter-ai-min">AI Score:</label>
+      <input type="number" id="filter-ai-min" min="1" max="10" placeholder="Min" style="width:60px">
+      <span style="color:var(--text-muted)">-</span>
+      <input type="number" id="filter-ai-max" min="1" max="10" placeholder="Max" style="width:60px">
+    </div>
+    <div class="filter-group" style="flex:1;min-width:150px">
+      <label for="filter-search">Search:</label>
+      <input type="text" id="filter-search" placeholder="Search title..." style="flex:1;width:100%">
+    </div>
+  </div>
+  <div class="table-container">
+    <table id="pr-table">
+      <thead>
+        <tr>
+          <th data-sort="pr">PR# <span class="sort-arrow"></span></th>
+          <th data-sort="title">Title <span class="sort-arrow"></span></th>
+          <th data-sort="tier">Difficulty <span class="sort-arrow"></span></th>
+          <th data-sort="aiScore">AI Score <span class="sort-arrow"></span></th>
+          <th data-sort="files">Files <span class="sort-arrow"></span></th>
+          <th data-sort="lines">Lines <span class="sort-arrow"></span></th>
+          <th data-sort="category">Category <span class="sort-arrow"></span></th>
+          <th data-sort="theme">Theme <span class="sort-arrow"></span></th>
+        </tr>
+      </thead>
+      <tbody id="pr-tbody"></tbody>
+    </table>
+    <div class="no-results" id="no-results" style="display:none">No PRs match your filters.</div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="page-footer">
+  <div class="container">
+    Generated for Node-RED repository analysis &bull; 5 open PRs (excluding PRs with merge commits) &bull; Data fetched Feb 19, 2026 from <a href="https://github.com/node-red/node-red/pulls" style="color:var(--accent)">github.com/node-red/node-red</a>
+  </div>
+</footer>
+
+<script>
+// ==================== PR DATA (Open PRs only) ====================
+const PR_DATA = [
+  {
+    pr: 5486,
+    title: "Support ctrl key to select configuration nodes",
+    tier: "Trivial",
+    aiScore: 9,
+    files: 1,
+    lines: 2,
+    category: "Bug Fix",
+    theme: "UI",
+    author: "kazuhitoyokoi",
+    created: "2026-02-15",
+    description: "Fixes #5485. Adds ctrl-key support for selecting configuration nodes in the editor."
+  },
+  {
+    pr: 5484,
+    title: "Fix 'connected to ...' log string in tcp in/out nodes using TLS",
+    tier: "Trivial",
+    aiScore: 9,
+    files: 1,
+    lines: 4,
+    category: "Bug Fix",
+    theme: "Network",
+    author: "marcows",
+    created: "2026-02-13",
+    description: "Fixes wrongly displayed 'status.connected' string instead of e.g. 'connected to 127.0.0.1:6789'. Also normalizes spacing in function invocation to match non-TLS path."
+  },
+  {
+    pr: 5482,
+    title: "Add \u00a7 as shortcut meta-key",
+    tier: "Trivial",
+    aiScore: 9,
+    files: 1,
+    lines: 1,
+    category: "Enhancement",
+    theme: "UI",
+    author: "gorenje",
+    created: "2026-02-11",
+    description: "Adds the '\u00a7' character as a shortcut prefix key, enabling mappings like Cmd-\u00a7 for zoom-out on international keyboards."
+  },
+  {
+    pr: 5475,
+    title: "Add WebContainer-based branch preview deployments",
+    tier: "Medium-High",
+    aiScore: 3,
+    files: 1,
+    lines: 724,
+    category: "Feature",
+    theme: "Infra",
+    author: "dimitrieh",
+    created: "2026-02-04",
+    description: "Adds a GitHub Actions workflow deploying live branch previews to Netlify using WebContainer. Each branch gets a URL where Node-RED boots entirely in the browser. Uses @webcontainer/snapshot and GitHub Deployments API."
+  },
+  {
+    pr: 5459,
+    title: "Prevent double done() call in TCP request node close handler",
+    tier: "Trivial",
+    aiScore: 8,
+    files: 1,
+    lines: 18,
+    category: "Bug Fix",
+    theme: "Network",
+    author: "Dennis-SEG",
+    created: "2026-01-24",
+    description: "Fixes #5452. TCP request node could call done() twice during close sequence. Only calls done() directly if there's no client; otherwise delegates to client 'close' event."
+  },
+];
+
+const TIER_COLORS = {
+  "Trivial": "#22c55e",
+  "Low": "#3b82f6",
+  "Medium": "#eab308",
+  "Medium-High": "#f97316",
+  "High": "#ef4444",
+};
+
+const TIER_ORDER = ["Trivial", "Low", "Medium", "Medium-High", "High"];
+
+// ==================== STAT CARDS ====================
+function renderStatCards() {
+  const container = document.getElementById("stat-cards");
+  const total = PR_DATA.length;
+  const avgAI = (PR_DATA.reduce((s, p) => s + p.aiScore, 0) / total).toFixed(1);
+  const highAI = PR_DATA.filter(p => p.aiScore >= 8).length;
+  const bugFixes = PR_DATA.filter(p => p.category === "Bug Fix").length;
+  const features = PR_DATA.filter(p => p.category === "Feature" || p.category === "Enhancement").length;
+
+  const tierCounts = {};
+  TIER_ORDER.forEach(t => tierCounts[t] = 0);
+  PR_DATA.forEach(p => tierCounts[p.tier]++);
+
+  const stats = [
+    { value: total, label: "Open PRs", color: "var(--accent)" },
+    { value: avgAI, label: "Avg AI Score", color: "#a78bfa" },
+    { value: highAI, label: "High AI Suitability (8+)", color: "var(--tier-trivial)" },
+    { value: bugFixes, label: "Bug Fixes", color: "var(--tier-low)" },
+    { value: features, label: "Features / Enhancements", color: "var(--tier-medium)" },
+    { value: tierCounts["Trivial"], label: "Trivial Tier", color: "var(--tier-trivial)" },
+  ];
+
+  container.innerHTML = stats.map(s => `
+    <div class="stat-card">
+      <div class="stat-value" style="color:${s.color}">${s.value}</div>
+      <div class="stat-label">${s.label}</div>
+    </div>
+  `).join("");
+}
+
+// ==================== PR DETAIL CARDS ====================
+function renderPRDetails() {
+  const container = document.getElementById("pr-details");
+  container.innerHTML = PR_DATA.map(p => `
+    <div class="pr-detail-card">
+      <div class="pr-card-header">
+        <div>
+          <a class="pr-link" href="https://github.com/node-red/node-red/pull/${p.pr}" target="_blank" rel="noopener">#${p.pr}</a>
+          <span class="tier-badge tier-${p.tier}" style="margin-left:8px">${p.tier}</span>
+        </div>
+        <div class="ai-meter">
+          <span class="ai-meter-value" style="color:${getAIColor(p.aiScore)}">AI: ${p.aiScore}/10</span>
+          <div class="ai-meter-bar">
+            <div class="ai-meter-fill" style="width:${p.aiScore * 10}%;background:${getAIColor(p.aiScore)}"></div>
+          </div>
+        </div>
+      </div>
+      <div class="pr-card-title">${p.title}</div>
+      <div class="pr-card-meta">by <strong>${p.author}</strong> &bull; opened ${p.created} &bull; ${p.category} &bull; ${p.theme}</div>
+      <div class="pr-card-desc">${p.description}</div>
+      <div class="pr-card-stats">
+        <div class="pr-card-stat"><span class="stat-num">${p.files}</span><span class="stat-lbl">Files</span></div>
+        <div class="pr-card-stat"><span class="stat-num">${p.lines}</span><span class="stat-lbl">Lines</span></div>
+      </div>
+    </div>
+  `).join("");
+}
+
+// ==================== TABS ====================
+function initTabs() {
+  const btns = document.querySelectorAll(".tab-btn");
+  btns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      btns.forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+      btn.classList.add("active");
+      const panel = document.getElementById(btn.dataset.tab);
+      panel.classList.add("active");
+      const unrendered = panel.querySelectorAll("pre.mermaid:not([data-processed])");
+      if (unrendered.length > 0) {
+        mermaid.run({ nodes: unrendered });
+      }
+    });
+  });
+}
+
+// ==================== CHARTS ====================
+function initCharts() {
+  Chart.defaults.color = "#94a3b8";
+  Chart.defaults.borderColor = "#334155";
+
+  // 1) Doughnut - PR distribution by tier
+  const tierCounts = {};
+  TIER_ORDER.forEach(t => tierCounts[t] = 0);
+  PR_DATA.forEach(p => tierCounts[p.tier]++);
+  const activeTiers = TIER_ORDER.filter(t => tierCounts[t] > 0);
+
+  new Chart(document.getElementById("chart-distribution"), {
+    type: "doughnut",
+    data: {
+      labels: activeTiers,
+      datasets: [{
+        data: activeTiers.map(t => tierCounts[t]),
+        backgroundColor: activeTiers.map(t => TIER_COLORS[t]),
+        borderColor: "#1e293b",
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: { position: "right", labels: { padding: 16, usePointStyle: true } },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.label}: ${ctx.raw} PRs (${((ctx.raw / PR_DATA.length) * 100).toFixed(0)}%)`
+          }
+        }
+      }
+    }
+  });
+
+  // 2) Horizontal Bar - AI Suitability per PR
+  const sorted = [...PR_DATA].sort((a, b) => b.aiScore - a.aiScore);
+  new Chart(document.getElementById("chart-ai-scores"), {
+    type: "bar",
+    data: {
+      labels: sorted.map(p => `#${p.pr}`),
+      datasets: [{
+        label: "AI Score",
+        data: sorted.map(p => p.aiScore),
+        backgroundColor: sorted.map(p => TIER_COLORS[p.tier]),
+        borderRadius: 4
+      }]
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: true,
+      scales: {
+        x: { min: 0, max: 10, grid: { color: "#334155" }, title: { display: true, text: "AI Suitability Score" } },
+        y: { ticks: { font: { size: 12 } }, grid: { display: false } }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            afterLabel: ctx => {
+              const pr = sorted[ctx.dataIndex];
+              return `${pr.title}\nTier: ${pr.tier} | ${pr.category}`;
+            }
+          }
+        }
+      }
+    }
+  });
+
+  // 3) Radar - Theme breakdown
+  const themes = [...new Set(PR_DATA.map(p => p.theme))];
+  const themeCounts = themes.map(t => PR_DATA.filter(p => p.theme === t).length);
+  const themeAvgAI = themes.map(t => {
+    const prs = PR_DATA.filter(p => p.theme === t);
+    return +(prs.reduce((s, p) => s + p.aiScore, 0) / prs.length).toFixed(1);
+  });
+
+  new Chart(document.getElementById("chart-radar"), {
+    type: "radar",
+    data: {
+      labels: themes,
+      datasets: [
+        {
+          label: "PR Count",
+          data: themeCounts,
+          backgroundColor: "rgba(56, 189, 248, 0.15)",
+          borderColor: "#38bdf8",
+          pointBackgroundColor: "#38bdf8"
+        },
+        {
+          label: "Avg AI Score",
+          data: themeAvgAI,
+          backgroundColor: "rgba(167, 139, 250, 0.15)",
+          borderColor: "#a78bfa",
+          pointBackgroundColor: "#a78bfa"
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      scales: {
+        r: {
+          beginAtZero: true,
+          grid: { color: "#334155" },
+          angleLines: { color: "#334155" },
+          pointLabels: { font: { size: 13 } }
+        }
+      },
+      plugins: { legend: { labels: { usePointStyle: true } } }
+    }
+  });
+
+  // 4) Scatter - Difficulty tier (x) vs AI score (y)
+  const tierNumeric = { "Trivial": 1, "Low": 2, "Medium": 3, "Medium-High": 4, "High": 5 };
+  const scatterData = PR_DATA.map(p => ({
+    x: tierNumeric[p.tier],
+    y: p.aiScore,
+    pr: p.pr,
+    title: p.title,
+    tier: p.tier
+  }));
+
+  // Slight jitter to prevent overlap
+  scatterData.forEach((d, i) => {
+    d.x += (Math.sin(i * 2.7) * 0.12);
+    d.y += (Math.cos(i * 3.1) * 0.12);
+  });
+
+  new Chart(document.getElementById("chart-scatter"), {
+    type: "scatter",
+    data: {
+      datasets: TIER_ORDER.filter(t => PR_DATA.some(p => p.tier === t)).map(tier => ({
+        label: tier,
+        data: scatterData.filter(d => d.tier === tier),
+        backgroundColor: TIER_COLORS[tier],
+        pointRadius: 8,
+        pointHoverRadius: 11
+      }))
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      scales: {
+        x: {
+          min: 0.5, max: 5.5,
+          ticks: {
+            stepSize: 1,
+            callback: v => ["", "Trivial", "Low", "Medium", "Med-High", "High"][v] || ""
+          },
+          grid: { color: "#334155" },
+          title: { display: true, text: "Difficulty Tier" }
+        },
+        y: {
+          min: 0, max: 10.5,
+          grid: { color: "#334155" },
+          title: { display: true, text: "AI Suitability Score" }
+        }
+      },
+      plugins: {
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const d = ctx.raw;
+              const orig = PR_DATA.find(p => p.pr === d.pr);
+              return `#${d.pr}: ${d.title} (${d.tier}, AI: ${orig.aiScore})`;
+            }
+          }
+        },
+        legend: { labels: { usePointStyle: true } }
+      }
+    }
+  });
+}
+
+// ==================== TABLE ====================
+let sortCol = "pr";
+let sortDir = "desc";
+
+function getAIColor(score) {
+  if (score >= 8) return "var(--tier-trivial)";
+  if (score >= 5) return "var(--tier-medium)";
+  return "var(--tier-high)";
+}
+
+function renderTable(data) {
+  const tbody = document.getElementById("pr-tbody");
+  const noResults = document.getElementById("no-results");
+
+  if (data.length === 0) {
+    tbody.innerHTML = "";
+    noResults.style.display = "block";
+    return;
+  }
+  noResults.style.display = "none";
+
+  tbody.innerHTML = data.map(p => `
+    <tr>
+      <td><a class="pr-link" href="https://github.com/node-red/node-red/pull/${p.pr}" target="_blank" rel="noopener">#${p.pr}</a></td>
+      <td>${p.title}</td>
+      <td><span class="tier-badge tier-${p.tier}">${p.tier}</span></td>
+      <td>
+        <div class="ai-meter">
+          <span class="ai-meter-value" style="color:${getAIColor(p.aiScore)}">${p.aiScore}</span>
+          <div class="ai-meter-bar">
+            <div class="ai-meter-fill" style="width:${p.aiScore * 10}%;background:${getAIColor(p.aiScore)}"></div>
+          </div>
+        </div>
+      </td>
+      <td>${p.files}</td>
+      <td>${p.lines.toLocaleString()}</td>
+      <td>${p.category}</td>
+      <td>${p.theme}</td>
+    </tr>
+  `).join("");
+}
+
+function getFilteredSorted() {
+  const tierVal = document.getElementById("filter-tier").value;
+  const catVal = document.getElementById("filter-category").value;
+  const aiMin = parseInt(document.getElementById("filter-ai-min").value) || 0;
+  const aiMax = parseInt(document.getElementById("filter-ai-max").value) || 10;
+  const search = document.getElementById("filter-search").value.toLowerCase();
+
+  let data = PR_DATA.filter(p => {
+    if (tierVal && p.tier !== tierVal) return false;
+    if (catVal && p.category !== catVal) return false;
+    if (p.aiScore < aiMin || p.aiScore > aiMax) return false;
+    if (search && !p.title.toLowerCase().includes(search) && !String(p.pr).includes(search)) return false;
+    return true;
+  });
+
+  data.sort((a, b) => {
+    let va = a[sortCol], vb = b[sortCol];
+    if (sortCol === "tier") {
+      va = TIER_ORDER.indexOf(a.tier);
+      vb = TIER_ORDER.indexOf(b.tier);
+    }
+    if (typeof va === "string") {
+      return sortDir === "asc" ? va.localeCompare(vb) : vb.localeCompare(va);
+    }
+    return sortDir === "asc" ? va - vb : vb - va;
+  });
+
+  return data;
+}
+
+function updateTable() {
+  renderTable(getFilteredSorted());
+}
+
+function initFilters() {
+  const tiers = [...new Set(PR_DATA.map(p => p.tier))];
+  const cats = [...new Set(PR_DATA.map(p => p.category))];
+  const tierSel = document.getElementById("filter-tier");
+  const catSel = document.getElementById("filter-category");
+
+  tiers.sort((a, b) => TIER_ORDER.indexOf(a) - TIER_ORDER.indexOf(b));
+  tiers.forEach(t => { const o = document.createElement("option"); o.value = t; o.textContent = t; tierSel.appendChild(o); });
+  cats.sort().forEach(c => { const o = document.createElement("option"); o.value = c; o.textContent = c; catSel.appendChild(o); });
+
+  document.querySelectorAll(".filter-bar select, .filter-bar input").forEach(el => {
+    el.addEventListener("input", updateTable);
+    el.addEventListener("change", updateTable);
+  });
+
+  document.querySelectorAll("thead th[data-sort]").forEach(th => {
+    th.addEventListener("click", () => {
+      const col = th.dataset.sort;
+      if (sortCol === col) {
+        sortDir = sortDir === "asc" ? "desc" : "asc";
+      } else {
+        sortCol = col;
+        sortDir = "asc";
+      }
+      document.querySelectorAll("thead th .sort-arrow").forEach(a => a.textContent = "");
+      th.querySelector(".sort-arrow").textContent = sortDir === "asc" ? " \u25b2" : " \u25bc";
+      updateTable();
+    });
+  });
+}
+
+// ==================== INIT ====================
+document.addEventListener("DOMContentLoaded", () => {
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: "dark",
+    themeVariables: {
+      darkMode: true,
+      background: "#1e293b",
+      primaryColor: "#1e3a5f",
+      primaryTextColor: "#f1f5f9",
+      primaryBorderColor: "#38bdf8",
+      lineColor: "#64748b",
+      secondaryColor: "#334155",
+      tertiaryColor: "#0f172a"
+    },
+    flowchart: { curve: "basis", htmlLabels: true }
+  });
+
+  const visibleDiagrams = document.querySelectorAll(".tab-panel.active pre.mermaid");
+  mermaid.run({ nodes: visibleDiagrams });
+
+  renderStatCards();
+  renderPRDetails();
+  initTabs();
+  initCharts();
+  initFilters();
+  updateTable();
+});
+</script>
+</body>
+</html>
