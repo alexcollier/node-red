@@ -15,7 +15,8 @@
       "Bash(./node_modules/.bin/grunt simplemocha:all:*)",
       "Bash(node:*)",
       "Bash(timeout 45 node:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(npm run build:*)"
     ]
   }
 }
